@@ -33,21 +33,25 @@
 
     .info.legend i {
       width: 15px;
-      /* Adjust the width as needed for color markers */
       height: 15px;
       display: inline-block;
       margin-right: 5px;
-      /* Margin between color marker and text */
     }
 
     .info.legend span {
       display: inline-block;
       width: 20px;
-      /* Adjust the width as needed for the text */
       margin-left: 1px;
-      /* Adjust the margin to control the spacing */
 
     }
+
+    /* Define styles for the legend container */
+.legend-container {
+  max-height: 340px; /* Set the maximum height for scrolling */
+  overflow: auto;   /* Enable scrolling if content exceeds the container's height */
+  padding: 5px;    /* Add some padding for better appearance */
+  background-color: #fff; /* Set a background color for the container */
+}
 
     #map-container {
       display: flex;
@@ -65,8 +69,8 @@
       border: 1px solid #ccc;
       z-index: 1000;
       width: 10%;
-      height: 470px; /* Set the desired height for the legend */
-  overflow: auto; /* Add a vertical scrollbar when needed */
+      height: 470px; 
+  overflow: auto; 
     }
 
     .legend-color {
@@ -299,33 +303,39 @@
             legend.remove();
           }
 
-          // Create the legend
-          legend = L.control({ position: 'topleft' });
+// Create the legend
+legend = L.control({ position: 'topleft' });
 
-          legend.onAdd = function (map) {
-            const div = L.DomUtil.create('div', 'info legend');
-            const labels = [];
+legend.onAdd = function (map) {
+  const div = L.DomUtil.create('div', 'info legend');
+  const legendContainer = L.DomUtil.create('div', 'legend-container'); // Create a container for the legend
+  const labels = [];
 
-            // Add a two-line title to the legend
-            div.innerHTML = '<div class="legend-title">Ranges</div><div class="legend-title">Overlays</div>';
+  // Add a two-line title to the legend
+  div.innerHTML = '<div class="legend-title">Ranges</div><div class="legend-title">Overlays</div>';
 
-            // Get unique values from the data and create labels
-            const uniqueValues = [...new Set(data.features.map(feature => feature.properties.speciescou))];
+  // Get unique values from the data and create labels
+  const uniqueValues = [...new Set(data.features.map(feature => feature.properties.speciescou))];
 
-            uniqueValues.sort((a, b) => a - b); // Sort values in ascending order
-            for (const value of uniqueValues) {
-              const color = getColor(value); // Get the color code
+  uniqueValues.sort((a, b) => a - b); // Sort values in ascending order
+  for (const value of uniqueValues) {
+    const color = getColor(value); // Get the color code
 
-              labels.push(
-                '<i style="background:' + getColor(value) + '"></i>' +
-                '<span>' + value + '</span>'
-              );
-            }
+    labels.push(
+      '<i style="background:' + getColor(value) + '"></i>' +
+      '<span>' + value + '</span>'
+    );
+  }
 
-            // Add the labels to the legend
-            div.innerHTML += labels.join('<br>');
-            return div;
-          };
+  // Add the labels to the legend
+  legendContainer.innerHTML = labels.join('<br>');
+  div.appendChild(legendContainer);
+
+
+
+  return div;
+};
+
 
 
 

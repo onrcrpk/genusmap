@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse by taxonomy - genus</title>
+
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+
+
+
+
+  <style>
+    #genmap {
+      height: 500px;
+      width: 960px;
+    }
+
+
+
+    .info.legend {
+      background: #fff;
+      border: 1px solid #000;
+      padding: 5px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .info.legend i {
+      width: 15px;
+      /* Adjust the width as needed for color markers */
+      height: 15px;
+      display: inline-block;
+      margin-right: 5px;
+      /* Margin between color marker and text */
+    }
+
+    .info.legend span {
+      display: inline-block;
+      width: 20px;
+      /* Adjust the width as needed for the text */
+      margin-left: 1px;
+      /* Adjust the margin to control the spacing */
+
+    }
+
+    #map-container {
+      display: flex;
+      width: 100%;
+    }
+
+    #map {
+      flex: 1;
+      width: 70%;
+    }
+
+    #legend {
+      background: white;
+      padding: 5px;
+      border: 1px solid #ccc;
+      z-index: 1000;
+      width: 10%;
+    }
+
+    .legend-color {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background-color: #000;
+      border-radius: 50%;
+      vertical-align: middle;
+      /* Align the color circles vertically in the middle */
+      margin-right: 5px;
+    }
+
+    #legend div {
+      font-size: 12px;
+      margin-bottom: 3px;
+      line-height: 12px;
+      /* Align the text vertically with the color circles */
+      vertical-align: middle;
+      /* Align the text vertically in the middle */
+    }
+  </style>
+
+
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"
+    integrity="sha512-3gJwYpMe3QewGELv8k/BX9vcqhryRdzRMxVfq6ngyWXwo03GFEzjsUm8Q7RZcHPHksttq7/GFoxjCVUjkjvPdw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js'></script>
+  <link href='https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/leaflet.fullscreen.css'
+    rel='stylesheet' />
+
+  <link rel="stylesheet" href="L.switchBasemap.css">
+
+  <script type="text/javascript" src="L.switchBasemap.js"></script>
+
+  <script src="https://unpkg.com/leaflet-kmz@latest/dist/leaflet-kmz.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.4.2/chroma.min.js"
+    integrity="sha512-zInFF17qBFVvvvFpIfeBzo7Tj7+rQxLeTJDmbxjBz5/zIr89YVbTNelNhdTT+/DCrxoVzBeUPVFJsczKbB7sew=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+    integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+</head>
+</head>
+
+<body>
+
+  <div id="map-container">
+    <div id="genmap"></div>
+    <div id="legend"></div>
+  </div>
+
+
+
+  <!-- Predefined dropdown menu -->
+  <div class="toggle-container">
+    <label>
+      <select id="genusSelect">
+        <option value="" selected disabled>Select genus</option>
+        <option value="Cisticola">Cisticola</option>
+        <option value="Anser">Anser</option>
+        <option value="Phylloscopus">Phylloscopus</option>
+        <option value="Ploceus">Ploceus</option>
+        <option value="Buphagus">Buphagus</option>
+        <option value="Batis">Batis</option>
+        <option value="Caprimulgus">Caprimulgus</option>
+        <option value="Columba">Columba</option>
+        <option value="Cranioleuca">Cranioleuca</option>
+        <option value="Ducula">Ducula</option>
+        <option value="Lyrurus">Lyrurus</option>
+        <option value="Klais">Klais</option>
+        <option value="Ptilinopus">Ptilinopus</option>
+        <option value="Sitta">Sitta</option>
+
+      </select>
+    </label>
+
+
+
+    <button id="toggleMarkerButton">Toggle Markers</button>
+    <button id="toggleLayerButton">Toggle Species Ranges</button>
+
+  </div>
+
+
+
+
+
+
+
+
+
+
+  <!-- Loading indicator -->
+  <div id="loadingIndicator" style="display:none;">Loading...</div>
+
+
+
+  <script>
+
+
+
+
+
+    // Create a Leaflet map and set the initial view
+    var map = L.map('genmap', {
+      worldCopyJump: true,
+      zoomControl: false, // default zoom control is on the left top.
+      worldCopyJump: true, // Enable world copy jump
+      wheelPxPerZoomLevel: 120 // Default is 60, try doubling to decrease sensitivity
+    }).setView([35, 15], 2);
+
+
+    L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(map);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    map.addControl(new L.Control.Fullscreen({ position: 'topright' }));
+
+    var pixel_ratio = parseInt(window.devicePixelRatio) || 1;
+    var max_zoom = 16;
+    var tile_size = 512;
+
+    var gbifTileURL = 'https://tile.gbif.org/3857/omt/{z}/{x}/{y}@{r}x.png?style=gbif-geyser'.replace('{r}', pixel_ratio);
+
+
+    // Define a single tile layer for GBIF
+    var gbifTileLayer = L.tileLayer(gbifTileURL, {
+      attribution: 'Tiles &copy; GBIF',
+      maxZoom: 17, // Adjust maxZoom as needed
+      opacity: 1
+    });
+
+
+
+
+    // Define basemap layers with their respective properties
+    new L.basemapsSwitcher([
+
+      {
+        layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri'
+        }).setOpacity(0.9).addTo(map),//DEFAULT MAP
+        maxZoom: 17,
+        icon: 'terrain.jpeg',
+        name: 'Terrain'
+      },
+      {
+        layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri'
+        }).setOpacity(0.9),
+        icon: 'topo.jpg',
+        name: 'Topographic'
+      },
+      {
+        layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+        }).setOpacity(0.9),
+        maxZoom: 21,
+        icon: 'satellite.jpg',
+        name: 'Satellite'
+      },
+      {
+        layer: L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors)'
+        }),
+        icon: 'osm.png',
+        name: 'OSM'
+      },
+      {
+        layer: gbifTileLayer, // Use the gbifTileLayer here
+        icon: 'geyser.png', // You can specify an icon for the GBIF layer
+        name: 'GBIF' // Name of the basemap
+      },
+    ], { position: 'bottomleft' }).addTo(map);
+
+
+
+    let geojsonLayer; // Declare the variable at the top level
+    // Initialize map here (assuming 'map' is already defined)
+    let legend;
+    const markerGroup = L.layerGroup();
+
+
+
+
+
+    // Function to load and add GeoJSON data to the map from a ZIP archive
+    function loadGeoJSON(geoJSONZipUrl) {
+      fetch(geoJSONZipUrl)
+        .then(response => response.arrayBuffer())
+        .then(data => {
+          // Create a JSZip instance and load the ZIP data
+          const zip = new JSZip();
+          return zip.loadAsync(data);
+        })
+        .then(zip => {
+          // Assuming there's only one GeoJSON file in the ZIP archive
+          const geoJSONFile = Object.values(zip.files)[0];
+
+          // Read the GeoJSON file and parse it
+          return geoJSONFile.async('string');
+        })
+        .then(geoJSONString => JSON.parse(geoJSONString))
+        .then(data => {
+          // Calculate the maximum "speciescou" value
+          const maxSpeciesCount = Math.max(
+            ...data.features.map(feature => feature.properties.speciescou)
+          );
+
+          // Create a color scale from light purple to a high-contrast shade of purple
+          const colorScale = chroma.scale(['#f2e8ff', '#6e00c2']).domain([0, maxSpeciesCount]);
+
+          function getColor(speciescou) {
+            const color = colorScale(speciescou).hex();
+            return color;
+          }
+
+
+          // Check if the legend already exists and remove it
+          if (legend) {
+            legend.remove();
+          }
+
+          // Create the legend
+          legend = L.control({ position: 'topleft' });
+
+          legend.onAdd = function (map) {
+            const div = L.DomUtil.create('div', 'info legend');
+            const labels = [];
+
+            // Add a two-line title to the legend
+            div.innerHTML = '<div class="legend-title">Ranges</div><div class="legend-title">Overlays</div>';
+
+            // Get unique values from the data and create labels
+            const uniqueValues = [...new Set(data.features.map(feature => feature.properties.speciescou))];
+
+            uniqueValues.sort((a, b) => a - b); // Sort values in ascending order
+            for (const value of uniqueValues) {
+              const color = getColor(value); // Get the color code
+
+              labels.push(
+                '<i style="background:' + getColor(value) + '"></i>' +
+                '<span>' + value + '</span>'
+              );
+            }
+
+            // Add the labels to the legend
+            div.innerHTML += labels.join('<br>');
+            return div;
+          };
+
+
+
+
+          // Add the legend to the map
+          legend.addTo(map);
+
+          // Function to style the GeoJSON features
+          function style(feature) {
+            return {
+              fillColor: getColor(feature.properties.speciescou),
+              weight: 0.5,
+              opacity: 0.2,
+              color: 'black',
+              dashArray: '1',
+              fillOpacity: 0.75
+            };
+          }
+
+          // Remove the existing GeoJSON layer (if any)
+          if (geojsonLayer) {
+            map.removeLayer(geojsonLayer);
+          }
+
+          // Create the GeoJSON layer
+          geojsonLayer = L.geoJSON(data, {
+            style: style,
+            onEachFeature: function (feature, layer) {
+              // Add a pop-up with speciescou value
+              layer.bindPopup('Species Count: ' + feature.properties.speciescou);
+            }
+          });
+
+          // Add the GeoJSON layer to the map
+          geojsonLayer.addTo(map);
+
+          // Check if the marker layer exists and add it back to the map
+          if (markerLayer) {
+            markerLayer.addTo(map);
+          }
+
+          // Fit the map bounds to the GeoJSON layer
+          map.fitBounds(geojsonLayer.getBounds());
+
+        });
+
+    }
+
+    // Add an event listener to the dropdown
+    const dropdown = document.getElementById('genusSelect');
+    dropdown.addEventListener('change', function () {
+      const selectedValue = dropdown.value.toLowerCase(); // Convert to lowercase
+      const selectedGeoJSONUrl = `${selectedValue}.geojson.zip`;
+      loadGeoJSON(selectedGeoJSONUrl);
+
+    });
+
+
+
+
+
+
+
+    // Add a click event listener to the button to toggle the layer visibility
+    document.getElementById('toggleLayerButton').addEventListener('click', function () {
+      if (geojsonLayer && map.hasLayer(geojsonLayer)) {
+        // Layer is currently visible, so remove it
+        map.removeLayer(geojsonLayer);
+      } else {
+        // Layer is not visible, so add it back to the map
+        geojsonLayer.addTo(map);
+        geojsonLayer.bringToBack();
+
+
+      }
+    });
+
+    // Add an event listener to the button to toggle the marker layer visibility
+    document.getElementById('toggleMarkerButton').addEventListener('click', function () {
+      if (markerLayer && map.hasLayer(markerLayer)) {
+        // Marker layer is currently visible, so remove it
+        map.removeLayer(markerLayer);
+      } else {
+        // Marker layer is not visible, so add it back to the map
+        markerLayer.addTo(map);
+      }
+    });
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+    let markerLayer = L.layerGroup();
+
+
+
+    // Function to fetch data for a specific page
+    function fetchDataForPage(selectedGenus, page) {
+      const apiUrl = `https://xeno-canto.org/api/2/recordings?query=gen:"=${selectedGenus}"&page=${page}`;
+      return fetch(apiUrl).then(response => response.json());
+    }
+
+    // Function to get the maximum number of pages
+    function getMaxPages(selectedGenus) {
+      const apiUrl = `https://xeno-canto.org/api/2/recordings?query=gen:"=${selectedGenus}"&page=1`;
+      return fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => data.numPages);
+    }
+
+    // Function to check if coordinates are valid
+    function isValidCoordinates(lat, lon) {
+      lat = parseFloat(lat);
+      lon = parseFloat(lon);
+
+      return !isNaN(lat) && !isNaN(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+    }
+
+    const customColorPalette = [
+      { r: 255, g: 0, b: 0 },     // red
+      { r: 65, g: 32, b: 0 },     // maroon
+      { r: 255, g: 128, b: 0 },  // orange
+      { r: 255, g: 255, b: 0 },  // yellow
+      { r: 65, g: 200, b: 0 },   // green
+      { r: 0, g: 150, b: 255 }   // blue
+    ];
+
+    // Function to map species to a color from the custom color palette
+    function mapSpeciesToColor(species, genus, genusMap) {
+      if (genusMap[genus]) {
+        const speciesList = genusMap[genus].map(entry => entry.split(' ')[1].toLowerCase());
+        const speciesName = species.replace(`${genus} `, '').toLowerCase();
+
+        const speciesIndex = speciesList.indexOf(speciesName);
+
+        if (speciesIndex >= 0) {
+          const totalSpecies = speciesList.length;
+          const colorIndex = (speciesIndex / totalSpecies) * (customColorPalette.length - 1); // Interpolate between custom colors
+          const colorIndex1 = Math.floor(colorIndex);
+          const colorIndex2 = Math.ceil(colorIndex);
+          const colorFactor = colorIndex - colorIndex1;
+
+          // Interpolate between two custom colors based on the factor
+          const color1 = customColorPalette[colorIndex1];
+          const color2 = customColorPalette[colorIndex2];
+          const r = Math.round((1 - colorFactor) * color1.r + colorFactor * color2.r);
+          const g = Math.round((1 - colorFactor) * color1.g + colorFactor * color2.g);
+          const b = Math.round((1 - colorFactor) * color1.b + colorFactor * color2.b);
+
+          return `rgb(${r},${g},${b})`;
+        }
+      }
+      // Default to black for species not found in genusioc.json
+      console.log(`Species with default color (black): ${species}`);
+      return 'black';
+    }
+
+
+
+
+    // Add an event listener to the dropdown
+    document.getElementById('genusSelect').addEventListener('change', function () {
+      var selectedGenus = this.value;
+      if (selectedGenus) {
+        fetchAndDisplayMarkers(selectedGenus);
+      }
+    });
+
+
+
+
+    const markers = [];
+    // Function to create a circle marker with the same size and style
+    function createCircleMarker(lat, lng, color) {
+      const radius = 6; // Set the desired radius
+      const marker = L.circleMarker([lat, lng], {
+        radius: radius,
+        fillColor: color,
+        color: 'black',
+        weight: 1.5,
+        fillOpacity: 1,
+      });
+
+      return marker;
+    }
+
+    // Function to fetch data from the API and add markers to the map for all pages
+    async function fetchAndDisplayMarkers(selectedGenus) {
+      // Show the loading message
+      document.getElementById('loadingIndicator').style.display = 'block';
+
+      // Fetch the genusioc.json file here
+      fetch('genusioc.json')
+        .then(response => response.json())
+        .then(genusMap => {
+          if (genusMap[selectedGenus]) {
+            if (markerLayer) {
+              markerLayer.clearLayers(); // Clear existing markers if they exist
+            } else {
+              markerLayer = L.layerGroup(); // Initialize markerLayer if it doesn't exist
+            }
+
+            updateLegend(selectedGenus, genusMap);
+
+            getMaxPages(selectedGenus).then(async (maxPages) => {
+              for (let page = 1; page <= maxPages; page++) {
+                const data = await fetchDataForPage(selectedGenus, page);
+                console.log(`Page ${page} Data:`, data);
+
+                // Rest of your code to assign colors based on species order within the genus
+                data.recordings.forEach((item) => {
+                  const lat = parseFloat(item.lat);
+                  const lng = parseFloat(item.lng);
+
+                  if (!isNaN(lat) && !isNaN(lng) && isValidCoordinates(lat, lng)) {
+                    const genus = selectedGenus;
+                    const color = mapSpeciesToColor(item.sp, genus, genusMap);
+
+                    console.log(`Species: ${item.sp}, Color: ${color}`);
+
+                    // Create a circle marker with consistent size and style
+                    const marker = createCircleMarker(lat, lng, color);
+
+                    // Add the marker to the marker layer
+                    marker.addTo(markerLayer);
+                    marker.bindPopup('<b>' + item.sp + '</b><br>' + item.loc);
+                  }
+                });
+
+                // Add the marker layer to the map
+                if (!map.hasLayer(markerLayer)) {
+                  markerLayer.addTo(map); // Add the updated markerLayer to the map
+                }
+              }
+
+              // Hide the loading message when your code execution is complete
+              document.getElementById('loadingIndicator').style.display = 'none';
+            });
+          }
+        });
+    }
+
+    // Function to create and update the legend
+    function updateLegend(genus, genusMap) {
+      const legendDiv = document.getElementById('legend');
+      if (!legendDiv) return;
+
+      const genusSpecies = genusMap[genus];
+      if (!genusSpecies) return;
+
+      const legendContent = `<div><b>Species:</b></div>` + genusSpecies.map((species, index) => {
+        // Split the species name into words and take the second word (index 1)
+        const speciesName = species.split(' ')[1];
+        const color = mapSpeciesToColor(speciesName, genus, genusMap); // Use the species name
+        return `<div><span class="legend-color" style="background-color: ${color};"></span>${speciesName}</div>`;
+      }).join('');
+
+      legendDiv.innerHTML = legendContent;
+    }
+
+
+
+  </script>
+
+</body>
+
+
+</html>
